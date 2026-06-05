@@ -1,0 +1,39 @@
+[package]
+name = "gdrive-mount"
+version = "0.1.0"
+edition = "2021"
+description = "Mount your Google Drive as a disk on Linux — a free, open-source alternative to Insync."
+license = "GPL-3.0-or-later"
+readme = "README.md"
+keywords = ["google-drive", "rclone", "fuse", "gtk4", "cloud"]
+categories = ["filesystem"]
+# TODO: set this to your repository URL once the public repo exists.
+repository = ""
+default-run = "gdrive-mount"
+
+[dependencies]
+# Native GTK4 + libadwaita GUI (Ubuntu 24.04 ships GTK 4.14 / libadwaita 1.5).
+gtk = { package = "gtk4", version = "0.9", features = ["v4_14"] }
+adw = { package = "libadwaita", version = "0.7", features = ["v1_5"] }
+# Tray icon (StatusNotifierItem) in pure Rust, no C libappindicator.
+ksni = "0.2"
+# Channel to connect the tray thread with GTK's main thread.
+async-channel = "2"
+# Persistent config (serialize/deserialize our preferences) + JSON from rclone's RC API.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Small HTTP client (TLS via rustls, no system OpenSSL) to exchange the OAuth code for the token
+# against Google, so we do the login ourselves (no rclone page).
+ureq = "2"
+# Only to decode the tray icon's embedded PNG into an ARGB pixmap (no icon theme needed).
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[profile.dev]
+# No debuginfo: compiles faster and avoids rustc's stack overflow when generating debug info
+# over the giant -sys GTK crate bindings.
+debug = 0
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

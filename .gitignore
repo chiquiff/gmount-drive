@@ -1,0 +1,12 @@
+/target
+*.deb
+*.AppImage
+/packaging/.tools
+/packaging/AppDir
+/packaging/*.desktop
+*.swp
+*~
+.DS_Store
+
+# Internal design doc (not published)
+/PLAN.md

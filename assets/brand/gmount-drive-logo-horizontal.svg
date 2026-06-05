@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 520">
+<text x="550" y="245" font-family="DejaVu Sans, Arial, sans-serif" font-size="105" font-weight="800" fill="#172033">GMOUNT</text>
+<text x="1010" y="245" font-family="DejaVu Sans, Arial, sans-serif" font-size="105" font-weight="800" fill="#2F80ED">DRIVE</text>
+<text x="555" y="330" font-family="DejaVu Sans, Arial, sans-serif" font-size="36" fill="#64748B">Cloud mount for desktop</text>
+<g transform="translate(100 75) scale(.36)">
+<circle cx="379" cy="517" r="170" fill="#2F80ED"/>
+<circle cx="584" cy="455" r="180" fill="#56CCF2"/>
+<circle cx="728" cy="530" r="132" fill="#27AE60"/>
+<path d="M225 520h600a105 105 0 0 1 0 210H225a105 105 0 0 1 0-210z" fill="#2F80ED"/>
+<path d="M530 512h300a106 106 0 0 1 0 218H530z" fill="#27AE60"/>
+<rect x="276" y="625" width="472" height="205" rx="58" fill="#172033"/>
+<rect x="303" y="652" width="418" height="55" rx="27" fill="#ffffff" opacity=".18"/>
+<path d="M335 716h135" stroke="#F2C94C" stroke-width="36" stroke-linecap="round"/>
+<path d="M470 654l95 62-95 62z" fill="#F2C94C"/>
+<circle cx="660" cy="716" r="27" fill="#27AE60"/>
+</g></svg>

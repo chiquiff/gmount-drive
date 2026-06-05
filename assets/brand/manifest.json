@@ -1,0 +1,51 @@
+{
+  "brand": "GMOUNT-DRIVE",
+  "formats": [
+    "PNG",
+    "SVG"
+  ],
+  "notes": "PNG assets use transparent background unless filename indicates dark background, banner, or splash.",
+  "palette": {
+    "blue": "#2F80ED",
+    "green": "#27AE60",
+    "yellow": "#F2C94C",
+    "cyan": "#56CCF2",
+    "dark": "#172033",
+    "slate": "#334155",
+    "light": "#F8FAFC",
+    "white": "#FFFFFF",
+    "gray": "#94A3B8"
+  },
+  "assets": [
+    "gmount-drive-app-icon-1024.png",
+    "gmount-drive-app-icon-256.png",
+    "gmount-drive-app-icon-512.png",
+    "gmount-drive-banner-1920x640.png",
+    "gmount-drive-icon-1024.png",
+    "gmount-drive-icon-128.png",
+    "gmount-drive-icon-16.png",
+    "gmount-drive-icon-256.png",
+    "gmount-drive-icon-32.png",
+    "gmount-drive-icon-512.png",
+    "gmount-drive-icon-64.png",
+    "gmount-drive-logo-horizontal-dark-bg.png",
+    "gmount-drive-logo-horizontal.png",
+    "gmount-drive-logo-horizontal.svg",
+    "gmount-drive-mark-blue-128.png",
+    "gmount-drive-mark-blue-256.png",
+    "gmount-drive-mark-blue-32.png",
+    "gmount-drive-mark-blue-64.png",
+    "gmount-drive-mark-dark-128.png",
+    "gmount-drive-mark-dark-256.png",
+    "gmount-drive-mark-dark-32.png",
+    "gmount-drive-mark-dark-64.png",
+    "gmount-drive-mark-white-128.png",
+    "gmount-drive-mark-white-256.png",
+    "gmount-drive-mark-white-32.png",
+    "gmount-drive-mark-white-64.png",
+    "gmount-drive-mark.svg",
+    "gmount-drive-splash.png",
+    "gmount-drive-wordmark-white.png",
+    "gmount-drive-wordmark.png"
+  ]
+}
