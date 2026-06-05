@@ -25,6 +25,10 @@ nice UX** on top of it.
 
 > **Status:** early but fully usable. Connect, mount, browse and stream your Drive today.
 
+<div align="center">
+<img src="assets/screenshot.png" alt="GMount Drive main window" width="380">
+</div>
+
 ## ✨ Features
 
 - 🗂️ **Virtual disk / stream on demand** — files download only when opened (`rclone mount`
