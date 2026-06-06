@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.gmountdrive.App</id>
+  <name>GMount Drive</name>
+  <summary>Cloud mount for desktop</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <description>
+    <p>Mount your Google Drive as a disk on Linux. A free, open-source alternative to Insync,
+       with a native GTK4/libadwaita interface and rclone as the mount engine.</p>
+  </description>
+  <launchable type="desktop-id">io.github.gmountdrive.App.desktop</launchable>
+  <url type="homepage">https://github.com/chiquiff/gdrive-mount</url>
+</component>

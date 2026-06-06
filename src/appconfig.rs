@@ -22,8 +22,10 @@ pub struct Config {
     pub read_only: bool,
     /// Show Google Docs/Sheets/Slides as .docx/.xlsx/.pptx (--drive-export-formats).
     pub gdocs_as_office: bool,
-    /// Preload the folder tree on mount (vfs/refresh) for instant browsing.
+    /// Build the folder skeleton on mount (breadth-first) for instant navigation.
     pub fast_browsing: bool,
+    /// Prefetch the content of folders you browse (so files open instantly).
+    pub prefetch_content: bool,
 }
 
 impl Default for Config {
@@ -37,6 +39,7 @@ impl Default for Config {
             read_only: false,
             gdocs_as_office: false,
             fast_browsing: true,
+            prefetch_content: true,
         }
     }
 }

@@ -22,7 +22,7 @@ fi
 # 1. Icons in hicolor (several sizes).
 ICONDIR="$HOME/.local/share/icons/hicolor"
 for s in 16 32 64 128 256 512; do
-    install -Dm644 "$BRAND/gmount-drive-icon-$s.png" "$ICONDIR/${s}x${s}/apps/$APP_ID.png"
+    install -Dm644 "$BRAND/gmount-drive-dock-$s.png" "$ICONDIR/${s}x${s}/apps/$APP_ID.png"
 done
 
 # 2. The .desktop launcher.

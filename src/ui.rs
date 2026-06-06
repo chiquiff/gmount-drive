@@ -9,7 +9,7 @@ use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 
 use crate::tray::{DriveTray, TrayAction};
-use crate::{appconfig, autostart, mount, rclone, stats};
+use crate::{appconfig, autostart, mount, prefetch, rclone, stats};
 
 /// Entry point called on `activate`.
 pub fn build_ui(app: &adw::Application) {
@@ -49,6 +49,30 @@ pub fn build_ui(app: &adw::Application) {
     ui.refresh();
     ui.start_stats_polling();
 
+    // If we launched while the Drive was already mounted, kick off the post-mount work.
+    if mount::is_mounted() {
+        ui.after_mount();
+    }
+
+    // Tray "syncing" animation: while indexing or transferring, cycle the spinner frames.
+    let ui_anim = ui.clone();
+    glib::timeout_add_local(std::time::Duration::from_millis(130), move || {
+        let working = ui_anim.indexing.get() || ui_anim.transferring.get();
+        if working {
+            let f = (ui_anim.sync_frame.get() + 1) % N_SYNC_FRAMES;
+            ui_anim.sync_frame.set(f);
+            ui_anim.was_working.set(true);
+            ui_anim.tray_handle.update(move |t: &mut DriveTray| {
+                t.syncing = true;
+                t.frame = f;
+            });
+        } else if ui_anim.was_working.replace(false) {
+            // Just stopped working: switch the tray back to the static icon once.
+            ui_anim.tray_handle.update(|t: &mut DriveTray| t.syncing = false);
+        }
+        glib::ControlFlow::Continue
+    });
+
     // Loop that receives tray actions.
     let ui_rx = ui.clone();
     glib::spawn_future_local(async move {
@@ -66,13 +90,14 @@ pub fn build_ui(app: &adw::Application) {
                 match gio::spawn_blocking(mount::mount).await {
                     Ok(Err(e)) => ui_bg.notify("GMount Drive", &format!("Couldn't mount your Drive: {e}")),
                     Err(_) => ui_bg.notify("GMount Drive", "Internal error while mounting"),
-                    Ok(Ok(())) => {}
+                    Ok(Ok(())) => ui_bg.after_mount(),
                 }
                 ui_bg.refresh();
             }
         });
     } else {
         ui.window.present();
+        ui.clear_notification();
     }
 }
 
@@ -95,9 +120,19 @@ struct Ui {
     last_mounted: Cell<bool>,
     /// Monotonic counter so an old toast's hide timer doesn't hide a newer toast.
     toast_gen: Cell<u64>,
+    /// Background content prefetcher (watches the VFS cache); present while it's running.
+    prefetcher: Cell<Option<prefetch::Prefetcher>>,
+    /// "Working" signals that drive the tray's syncing animation.
+    indexing: Cell<bool>,
+    transferring: Cell<bool>,
+    sync_frame: Cell<usize>,
+    was_working: Cell<bool>,
     /// Flag to cancel an in-progress account setup (kills the rclone process).
     cancel: Arc<AtomicBool>,
 }
+
+/// Number of frames in the tray "syncing" animation (see assets/brand/gmount-drive-sync-*.png).
+const N_SYNC_FRAMES: usize = 8;
 
 impl Ui {
     fn new(app: &adw::Application, tray_handle: ksni::Handle<DriveTray>) -> Rc<Self> {
@@ -232,6 +267,11 @@ impl Ui {
             tray_handle,
             last_mounted: Cell::new(mount::is_mounted()),
             toast_gen: Cell::new(0),
+            prefetcher: Cell::new(None),
+            indexing: Cell::new(false),
+            transferring: Cell::new(false),
+            sync_frame: Cell::new(0),
+            was_working: Cell::new(false),
             cancel: Arc::new(AtomicBool::new(false)),
         })
     }
@@ -338,8 +378,10 @@ impl Ui {
 
                 if mounted {
                     let s = gio::spawn_blocking(stats::fetch).await.unwrap_or_default();
+                    ui.transferring.set(s.transferring > 0);
                     ui.show_stats(Some(s));
                 } else {
+                    ui.transferring.set(false);
                     ui.show_stats(None);
                 }
             });
@@ -365,12 +407,24 @@ impl Ui {
         }
     }
 
-    /// System notification (useful when running in the background without a window).
+    /// System notification (useful when running in the background without a window). We only show
+    /// it when there's NO visible window — otherwise the toast already covers it, and a lingering
+    /// notification shows up as a confusing badge on the dock icon.
     fn notify(&self, title: &str, body: &str) {
+        if self.window.is_visible() {
+            return;
+        }
         let n = gio::Notification::new(title);
         n.set_body(Some(body));
         if let Some(app) = self.window.application() {
             app.send_notification(Some("gmount-drive"), &n);
+        }
+    }
+
+    /// Clears any pending system notification (and its dock badge). Called when the window opens.
+    fn clear_notification(&self) {
+        if let Some(app) = self.window.application() {
+            app.withdraw_notification("gmount-drive");
         }
     }
 
@@ -507,6 +561,18 @@ impl Ui {
         });
         g_cache.add(&fast_row);
 
+        let prefetch_row = adw::SwitchRow::builder()
+            .title("Preload files you're browsing")
+            .subtitle("Download folder contents in the background so files open instantly")
+            .active(cfg.prefetch_content)
+            .build();
+        prefetch_row.connect_active_notify(|s| {
+            let mut c = appconfig::Config::load();
+            c.prefetch_content = s.is_active();
+            let _ = c.save();
+        });
+        g_cache.add(&prefetch_row);
+
         // Action: clear the cache now.
         let clear_row = adw::ActionRow::builder()
             .title("Clear cache now")
@@ -581,6 +647,7 @@ impl Ui {
     fn handle_tray_action(self: Rc<Self>, action: TrayAction) {
         match action {
             TrayAction::ShowWindow => {
+                self.clear_notification();
                 self.window.set_visible(true);
                 self.window.present();
             }
@@ -593,6 +660,7 @@ impl Ui {
                 }
             }
             TrayAction::Quit => {
+                self.stop_prefetch();
                 let app = self.window.application();
                 glib::spawn_future_local(async move {
                     let _ = gio::spawn_blocking(mount::unmount).await;
@@ -664,23 +732,7 @@ impl Ui {
                     if appconfig::Config::load().open_after_mount {
                         mount::open_folder();
                     }
-                    // Preload the folder listings in the background so browsing feels instant.
-                    // (This lists metadata, not file content, so it doesn't show as a transfer in
-                    // the Activity panel — we surface progress on the Mount row instead.)
-                    if appconfig::Config::load().fast_browsing {
-                        let ui_warm = ui.clone();
-                        glib::spawn_future_local(async move {
-                            ui_warm
-                                .mount_row
-                                .set_subtitle("Mounted — preparing fast browsing…");
-                            let _ = gio::spawn_blocking(stats::refresh_listing).await;
-                            // The user may have unmounted during the (possibly long) preload.
-                            if mount::is_mounted() {
-                                ui_warm.toast("Folders ready — browsing is now instant ✓");
-                            }
-                            ui_warm.refresh();
-                        });
-                    }
+                    ui.after_mount();
                 }
                 Ok(Err(e)) => ui.toast(&format!("Mount error: {e}")),
                 Err(_) => ui.toast("Internal error while mounting"),
@@ -689,8 +741,52 @@ impl Ui {
         });
     }
 
+    /// Post-mount background work: build the folder skeleton (instant navigation) and start the
+    /// content prefetcher (instant opens). Called from every path that ends up mounted.
+    fn after_mount(self: &Rc<Self>) {
+        let cfg = appconfig::Config::load();
+
+        // 1. Skeleton: one bulk recursive refresh (fast-list) so EVERY folder lists instantly
+        //    afterwards — no blank/loading folders.
+        if cfg.fast_browsing {
+            let ui_warm = self.clone();
+            glib::spawn_future_local(async move {
+                ui_warm.indexing.set(true);
+                ui_warm
+                    .mount_row
+                    .set_subtitle("Mounted — indexing your Drive…");
+                let ok = gio::spawn_blocking(crate::skeleton::build)
+                    .await
+                    .unwrap_or(false);
+                ui_warm.indexing.set(false);
+                if mount::is_mounted() {
+                    ui_warm.toast(if ok {
+                        "Fast browsing ready ✓"
+                    } else {
+                        "Indexing finished"
+                    });
+                }
+                ui_warm.refresh();
+            });
+        }
+
+        // 2. Content prefetch: watch the VFS cache and warm the folders you browse.
+        if cfg.prefetch_content {
+            self.prefetcher
+                .set(prefetch::Prefetcher::start(mount::mountpoint()));
+        } else {
+            self.prefetcher.set(None);
+        }
+    }
+
+    /// Stops the content prefetcher (on unmount/disconnect/quit). Dropping it stops its threads.
+    fn stop_prefetch(&self) {
+        self.prefetcher.set(None);
+    }
+
     fn on_unmount(self: Rc<Self>) {
         self.action_box.set_sensitive(false);
+        self.stop_prefetch();
         let ui = self.clone();
         glib::spawn_future_local(async move {
             let _ = gio::spawn_blocking(mount::unmount).await;
@@ -702,6 +798,7 @@ impl Ui {
 
     fn on_disconnect(self: Rc<Self>) {
         self.action_box.set_sensitive(false);
+        self.stop_prefetch();
         let ui = self.clone();
         glib::spawn_future_local(async move {
             let res = gio::spawn_blocking(|| {

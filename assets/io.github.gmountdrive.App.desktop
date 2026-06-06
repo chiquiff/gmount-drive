@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=GMount Drive
+Comment=Mount your Google Drive as a disk
+Exec=gmount-drive
+Icon=io.github.gmountdrive.App
+Terminal=false
+Categories=Utility;Network;FileTransfer;
+StartupWMClass=io.github.gmountdrive.App

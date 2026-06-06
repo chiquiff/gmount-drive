@@ -30,7 +30,7 @@ install -Dm755 "$BIN_SRC" "$ROOT/usr/bin/$PKG"
 
 # Icons (hicolor, several sizes).
 for s in 16 32 64 128 256 512; do
-    install -Dm644 "assets/brand/gmount-drive-icon-$s.png" \
+    install -Dm644 "assets/brand/gmount-drive-dock-$s.png" \
         "$ROOT/usr/share/icons/hicolor/${s}x${s}/apps/$APP_ID.png"
 done
 

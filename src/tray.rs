@@ -16,21 +16,43 @@ pub enum TrayAction {
 pub struct DriveTray {
     pub connected: bool,
     pub mounted: bool,
+    /// While true, the tray shows the animated "syncing" frames instead of the static icon.
+    pub syncing: bool,
+    /// Current animation frame (the UI advances this on a timer).
+    pub frame: usize,
     tx: Sender<TrayAction>,
-    /// Brand icon already decoded to an ARGB pixmap (empty if decoding failed).
+    /// Static brand icon (decoded ARGB pixmap; empty if decoding failed).
     icons: Vec<ksni::Icon>,
+    /// Animation frames for the "syncing" state (the mark + a rotating spinner badge).
+    sync_frames: Vec<ksni::Icon>,
 }
 
 impl DriveTray {
     pub fn new(tx: Sender<TrayAction>) -> Self {
-        let icons = load_icon(include_bytes!("../assets/brand/gmount-drive-app-icon-256.png"))
+        // Tray-specific icon: the brand mark trimmed to fill the whole canvas, so it renders as
+        // big as the system icons (the app-icon has ~18% padding that made it look tiny).
+        let icons = load_icon(include_bytes!("../assets/brand/gmount-drive-tray.png"))
             .into_iter()
             .collect();
+        let sync_bytes: [&[u8]; 8] = [
+            include_bytes!("../assets/brand/gmount-drive-sync-0.png"),
+            include_bytes!("../assets/brand/gmount-drive-sync-1.png"),
+            include_bytes!("../assets/brand/gmount-drive-sync-2.png"),
+            include_bytes!("../assets/brand/gmount-drive-sync-3.png"),
+            include_bytes!("../assets/brand/gmount-drive-sync-4.png"),
+            include_bytes!("../assets/brand/gmount-drive-sync-5.png"),
+            include_bytes!("../assets/brand/gmount-drive-sync-6.png"),
+            include_bytes!("../assets/brand/gmount-drive-sync-7.png"),
+        ];
+        let sync_frames = sync_bytes.into_iter().filter_map(load_icon).collect();
         Self {
             connected: false,
             mounted: false,
+            syncing: false,
+            frame: 0,
             tx,
             icons,
+            sync_frames,
         }
     }
 }
@@ -60,10 +82,16 @@ impl Tray for DriveTray {
         "GMount Drive".into()
     }
 
-    /// Brand icon as an embedded pixmap (doesn't depend on the installed icon theme).
+    /// Brand icon as an embedded pixmap (doesn't depend on the installed icon theme). While
+    /// syncing, returns the current animation frame instead of the static icon.
     /// If decoding failed, we return empty and fall back to the themed `icon_name` below.
     fn icon_pixmap(&self) -> Vec<ksni::Icon> {
-        self.icons.clone()
+        if self.syncing && !self.sync_frames.is_empty() {
+            let f = self.frame % self.sync_frames.len();
+            vec![self.sync_frames[f].clone()]
+        } else {
+            self.icons.clone()
+        }
     }
 
     fn icon_name(&self) -> String {

@@ -170,6 +170,8 @@ pub fn mount() -> Result<(), String> {
         .arg(&mp)
         // A long dir-cache-time = folder listings stay cached (re-opening = instant);
         // poll-interval keeps the cache fresh (new files appear within ~15s).
+        // --fast-list lets the recursive skeleton refresh use Google Drive's bulk recursive
+        // listing (ListR) — the whole tree in a few API calls instead of one per folder.
         .args([
             "--vfs-cache-mode",
             "full",
@@ -177,6 +179,7 @@ pub fn mount() -> Result<(), String> {
             "1000h",
             "--poll-interval",
             "15s",
+            "--fast-list",
         ])
         // Remote-control API to read live status (localhost only, no auth).
         .args(["--rc", "--rc-addr"])

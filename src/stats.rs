@@ -32,16 +32,6 @@ fn rc_call(cmd: &str) -> Option<Value> {
     serde_json::from_slice(&out.stdout).ok()
 }
 
-/// Recursively preloads the folder tree into the VFS cache (vfs/refresh), so that file listings
-/// appear instantly afterwards. **BLOCKS** until done (can take a while on large Drives): run in
-/// spawn_blocking.
-pub fn refresh_listing() {
-    let url = format!("http://{}/", mount::current_rc_addr());
-    let _ = Command::new(rclone::rclone_bin())
-        .args(["rc", "--url", &url, "vfs/refresh", "recursive=true"])
-        .output();
-}
-
 /// Reads core/stats + vfs/stats. Returns zeroed values if the RC doesn't respond.
 pub fn fetch() -> Stats {
     let mut s = Stats::default();

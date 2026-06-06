@@ -1,14 +1,13 @@
 [package]
 name = "gdrive-mount"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Mount your Google Drive as a disk on Linux — a free, open-source alternative to Insync."
 license = "GPL-3.0-or-later"
 readme = "README.md"
 keywords = ["google-drive", "rclone", "fuse", "gtk4", "cloud"]
 categories = ["filesystem"]
-# TODO: set this to your repository URL once the public repo exists.
-repository = ""
+repository = "https://github.com/chiquiff/gdrive-mount"
 default-run = "gdrive-mount"
 
 [dependencies]
@@ -27,6 +26,8 @@ serde_json = "1"
 ureq = "2"
 # Only to decode the tray icon's embedded PNG into an ARGB pixmap (no icon theme needed).
 image = { version = "0.25", default-features = false, features = ["png"] }
+# Watch rclone's VFS cache dir (inotify) to detect the folder you're browsing and prefetch it.
+notify = "6"
 
 [profile.dev]
 # No debuginfo: compiles faster and avoids rustc's stack overflow when generating debug info
@@ -37,3 +38,29 @@ debug = 0
 opt-level = 3
 lto = true
 strip = true
+
+# --- .rpm packaging (Fedora/RHEL) via `cargo generate-rpm` ---
+# Build with: bash packaging/build-rpm.sh
+[package.metadata.generate-rpm]
+name = "gmount-drive"
+summary = "Mount your Google Drive as a disk on Linux"
+# We declare the Fedora runtime deps explicitly below, so don't auto-scan (which can't map .so
+# deps to Fedora package names when building on a non-Fedora machine like Ubuntu).
+auto-req = "disabled"
+assets = [
+    { source = "target/release/gdrive-mount", dest = "/usr/bin/gmount-drive", mode = "0755" },
+    { source = "assets/io.github.gmountdrive.App.desktop", dest = "/usr/share/applications/io.github.gmountdrive.App.desktop", mode = "0644" },
+    { source = "assets/io.github.gmountdrive.App.metainfo.xml", dest = "/usr/share/metainfo/io.github.gmountdrive.App.metainfo.xml", mode = "0644" },
+    { source = "assets/brand/gmount-drive-dock-16.png", dest = "/usr/share/icons/hicolor/16x16/apps/io.github.gmountdrive.App.png", mode = "0644" },
+    { source = "assets/brand/gmount-drive-dock-32.png", dest = "/usr/share/icons/hicolor/32x32/apps/io.github.gmountdrive.App.png", mode = "0644" },
+    { source = "assets/brand/gmount-drive-dock-64.png", dest = "/usr/share/icons/hicolor/64x64/apps/io.github.gmountdrive.App.png", mode = "0644" },
+    { source = "assets/brand/gmount-drive-dock-128.png", dest = "/usr/share/icons/hicolor/128x128/apps/io.github.gmountdrive.App.png", mode = "0644" },
+    { source = "assets/brand/gmount-drive-dock-256.png", dest = "/usr/share/icons/hicolor/256x256/apps/io.github.gmountdrive.App.png", mode = "0644" },
+    { source = "assets/brand/gmount-drive-dock-512.png", dest = "/usr/share/icons/hicolor/512x512/apps/io.github.gmountdrive.App.png", mode = "0644" },
+]
+
+[package.metadata.generate-rpm.requires]
+gtk4 = "*"
+libadwaita = "*"
+dbus-libs = "*"
+fuse3 = "*"
