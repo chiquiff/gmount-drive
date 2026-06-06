@@ -38,13 +38,17 @@ nice UX** on top of it.
   - **Bring Your Own credential** — a guided wizard to create your own Google OAuth client
     (no rate limits, no 100-user cap). Paste the keys or just **upload the JSON** Google gives you.
     The OAuth flow runs entirely inside the app — no third-party branding.
-- ⚡ **Instant browsing** — the folder tree is pre-loaded on mount, so listings appear
-  immediately (like Insync's metadata sync) while content still streams on demand.
-- 📊 **Live status** — transfer speed, on-disk cache size, and Drive space used/free.
+- ⚡ **Instant browsing** — the whole Drive's folder structure is indexed on mount
+  (`--fast-list` + a recursive VFS refresh, like Insync's metadata sync), so folders never sit
+  on a blank "loading" screen while content streams on demand.
+- 🧠 **Smart prefetch** — the files in the folder you're browsing are downloaded in the
+  background (by watching rclone's VFS cache), so they open instantly. Optional.
+- 📊 **Live status** — transfer speed, on-disk cache size, Drive space used/free, and an
+  animated **syncing indicator** in the tray while it's working.
 - 🛎️ **System tray** — mount/unmount, open folder, close-to-tray, run in background.
 - 🚀 **Start at login** — optional autostart that mounts your Drive automatically.
 - ⚙️ **Preferences** — mount location, cache size/age limits, bandwidth limit, read-only
-  mode, "Google Docs as Office files", and more.
+  mode, "Google Docs as Office files", clear cache, faster-browsing & prefetch toggles, and more.
 
 ## 📦 Installation
 
@@ -59,12 +63,22 @@ sudo apt install ./gmount-drive_*.deb
 This pulls in the runtime dependencies automatically (`libgtk-4-1`, `libadwaita-1-0`,
 `libdbus-1-3`, `fuse3`) and recommends `rclone`.
 
+### Fedora / RHEL (`.rpm`)
+
+Download the latest `.rpm` from the [Releases](../../releases) page, then:
+
+```bash
+sudo dnf install ./gmount-drive-*.rpm
+```
+
+It depends on `gtk4`, `libadwaita`, `dbus-libs` and `fuse3`. Install `rclone` separately.
+
 ### From source
 
 See [Building from source](#-building-from-source).
 
 > Other distributions: an experimental AppImage build script is included
-> (`packaging/build-appimage.sh`). A native `.rpm` is on the roadmap.
+> (`packaging/build-appimage.sh`).
 
 ## 🚀 Usage
 
@@ -103,9 +117,11 @@ GMount Drive is a thin, native orchestrator around `rclone`:
 | `src/rclone.rs` | rclone integration: detect binary, create/delete remote, `about`. |
 | `src/oauth.rs` | Own OAuth2 loopback flow for BYO credentials (no rclone browser page). |
 | `src/wizard.rs` | Guided "Bring Your Own credential" wizard (deep links + JSON upload). |
-| `src/mount.rs` | Mount/unmount lifecycle, VFS flags, stale-mount cleanup, cache clear. |
-| `src/stats.rs` | Live stats + folder pre-loading via rclone's RC API. |
-| `src/tray.rs` | System tray icon and menu (`ksni`, StatusNotifierItem). |
+| `src/mount.rs` | Mount/unmount lifecycle, VFS flags, dynamic RC port, stale-mount cleanup, cache clear. |
+| `src/skeleton.rs` | Builds the folder index (recursive `vfs/refresh`) so browsing is instant. |
+| `src/prefetch.rs` | Smart content prefetch: watches the VFS cache and warms the folder you browse. |
+| `src/stats.rs` | Live stats (speed, cache, transfers) via rclone's RC API. |
+| `src/tray.rs` | System tray icon + animated syncing indicator (`ksni`, StatusNotifierItem). |
 | `src/autostart.rs` | XDG autostart (`~/.config/autostart`). |
 | `src/appconfig.rs` | Persistent preferences (`~/.config/gmount-drive/config.json`). |
 
@@ -144,10 +160,11 @@ A helper script is also provided: `bash build.sh`.
 bash install.sh
 ```
 
-### Build a `.deb`
+### Build packages
 
 ```bash
-bash packaging/build-deb.sh
+bash packaging/build-deb.sh   # Debian/Ubuntu .deb
+bash packaging/build-rpm.sh   # Fedora/RHEL .rpm (via cargo-generate-rpm)
 ```
 
 ## 🤝 Contributing
@@ -157,9 +174,9 @@ up your environment, the project conventions, and how to open a pull request.
 
 ## 🗺️ Roadmap
 
-- Native `.rpm` packaging.
 - File-status emblems in the file manager (Nautilus extension).
-- Google Docs export polish and multiple-account support.
+- Multiple accounts.
+- "Available offline" / pinned folders.
 - Two-way sync (opt-in, per folder).
 - Generic multi-cloud (rclone supports 70+ backends).
 
